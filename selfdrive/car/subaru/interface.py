@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 from cereal import car
 from panda import Panda
-from selfdrive.car import STD_CARGO_KG, get_safety_config, create_mads_event
+from selfdrive.car import STD_CARGO_KG, get_safety_config
 from selfdrive.car.interfaces import CarInterfaceBase
-from selfdrive.car.subaru.values import CAR, GLOBAL_GEN2, PREGLOBAL_CARS, SubaruFlags
-
-ButtonType = car.CarState.ButtonEvent.Type
-EventName = car.CarEvent.EventName
-GearShifter = car.CarState.GearShifter
+from selfdrive.car.subaru.values import CAR, GLOBAL_GEN2, PREGLOBAL_CARS, GLOBAL_CARS_SNG, SubaruFlags
 
 
 class CarInterface(CarInterfaceBase):
@@ -16,6 +12,7 @@ class CarInterface(CarInterfaceBase):
   def _get_params(ret, candidate, fingerprint, car_fw, experimental_long, docs):
     ret.carName = "subaru"
     ret.radarUnavailable = True
+    #ret.dashcamOnly = candidate in PREGLOBAL_CARS
     ret.autoResumeSng = False
 
     # Detect infotainment message sent from the camera
@@ -25,11 +22,20 @@ class CarInterface(CarInterfaceBase):
     if candidate in PREGLOBAL_CARS:
       ret.enableBsm = 0x25c in fingerprint[0]
       ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.subaruPreglobal)]
+      ret.autoResumeSng = True
     else:
       ret.enableBsm = 0x228 in fingerprint[0]
       ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.subaru)]
       if candidate in GLOBAL_GEN2:
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_SUBARU_GEN2
+      elif candidate == CAR.CROSSTREK_2020H:
+        ret.safetyConfigs[0].safetyParam |= Panda.FLAG_SUBARU_CROSSTREK_HYBRID
+      elif candidate == CAR.FORESTER_2020H:
+        ret.safetyConfigs[0].safetyParam |= Panda.FLAG_SUBARU_FORESTER_HYBRID
+      elif candidate == CAR.FORESTER_2022:
+        ret.safetyConfigs[0].safetyParam |= Panda.FLAG_SUBARU_FORESTER_2022
+      if candidate in GLOBAL_CARS_SNG:
+        ret.autoResumeSng = True
 
     ret.steerLimitTimer = 0.4
     ret.steerActuatorDelay = 0.1
